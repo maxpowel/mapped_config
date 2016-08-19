@@ -1,5 +1,8 @@
 Mapped config
 =============
+How to install
+---------------
+pip install mapped_config
 
 What is this?
 -------------
