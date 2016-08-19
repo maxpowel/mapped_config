@@ -226,6 +226,7 @@ print(database_config.driver)
 Json uses braces which conflicts with the replacement format used before.
 The json loader repalces the braces {var} for the percent symbol %value%
  
+example_simple_config.json
 ```json
 {
   "database": {
@@ -237,11 +238,25 @@ The json loader repalces the braces {var} for the percent symbol %value%
 }
 ```
 
+example_simple_parameters.json
+```json
+{
+  "database_driver": "mysql",
+  "database_hostname": "localhost",
+  "database_password": "root",
+  "database_port": 566
+}
+```
+
+
+
 Extending to other formats
 --------------------------
 I love YML but other people likes XML and other formats. To use them, just
 extend the class ConfigurationLoader and implement its interface (just two methods
-what basically converts your raw file into a dictionary)
+what basically converts your raw file into a dictionary).
+You can mix formats and use json for config and yml for parameters or whatever you want,
+just extend the base class and custom the load process.
 
 Tests
 -----
