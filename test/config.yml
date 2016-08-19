@@ -1,0 +1,4 @@
+database:
+    host: {database_host}
+    username: {database_username}
+    static: "Im static"

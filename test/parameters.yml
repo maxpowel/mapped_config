@@ -1,0 +1,6 @@
+database_host: localhost
+database_username: root
+a_pretty_list:
+  - 1
+  - 2
+  - who_am_i: "an object"

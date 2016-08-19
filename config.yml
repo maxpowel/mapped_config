@@ -1,0 +1,20 @@
+queue:
+  name: "pepe"
+  number:
+    moneda: euro
+    valor: 3
+  file_systems:
+    mongo:
+      server:
+         hostname: 333
+         port: 444
+      username: putacaca
+    activar: NO
+#  handlers:
+#    - namne: "pepe"
+#      version: "lolazo"
+
+
+simple:
+    saludo: hola
+    amigo: que tal
