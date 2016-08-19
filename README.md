@@ -223,8 +223,8 @@ print(database_config.password)
 print(database_config.driver)
 ```
 
-Json uses braces which conflicts with the replacement format used before.
-The json loader repalces the braces {var} for the percent symbol %value%
+Json uses braces which conflict with the replacement format used before.
+The json loader replaces the braces {var} for the percent symbol %value%
  
 example_simple_config.json
 ```json
