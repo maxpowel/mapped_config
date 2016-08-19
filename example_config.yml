@@ -1,0 +1,40 @@
+database:
+  default: {database_default}
+  providers:
+     - name: mysql
+       hostname: {mysql_hostname}
+       username: {mysql_password}
+
+    - name: postgres
+       hostname: {postgres_hostname}
+       username: {postgres_password}
+
+persistence:
+  amazon:
+      bucket: {amazon_bucket}
+  azure:
+      storage: {azure_storage}
+  local:
+      directory: {local_directory}
+
+
+crypto:
+  magical_numbers: [1,3,5,7]
+  best_algorithm: caesar
+
+
+
+queue:
+   max_instances: {queue_max_instances}
+   workers:
+      - name: cpu_intensive
+        schduler_plans:
+            low:
+               jump_order: [1, 3, 5, 7]
+      - name: io_high_throughput
+      - name: video_encoding
+            schduler_plans:
+            high:
+               jump_order: [2, 4, 6, 8]
+
+

@@ -1,0 +1,31 @@
+queue:
+  name: caa
+  number:
+    currency: euro
+    value: 3
+  file_systems:
+    mongo:
+      server:
+         hostname: 333
+         port: 344
+      username: user
+      activated: False
+  handlers:
+    - name: "pepe"
+      version:
+         model: nuevo
+         year: 1999
+      years: []
+      months: [1,2,3]
+    - name: "pepe2"
+      version:
+         model: nuevo
+         year: 1999
+      years: []
+      months: [1,2,3]
+
+
+simple:
+    greet: hello
+    friend: how are you
+

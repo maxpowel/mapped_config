@@ -28,31 +28,196 @@ class TestYmlLoader(unittest.TestCase):
         self.assertDictEqual(real_config, test_config, "Config data was not loaded correctly")
 
 
-class TestConfigurationLoader(unittest.TestCase):
+class TestConfigurationBuilder(unittest.TestCase):
 
-    def test_invalid_nodes(self):
-        yml_loader = loader.YmlLoader()
-        config = yml_loader.load_config("test/config.yml", "test/parameters.yml")
-        # Some mapping examples
-        database = namedtuple("database", ["name", "number", "file_systems"])
-        queue = namedtuple("queue", ["name", "number", "file_systems"])
-        database_again = database
+    @classmethod
+    def setUpClass(cls):
+        cls.loader = loader.YmlLoader()
 
-        with self.assertRaises(loader.NodeHasNoMappingException):
-            yml_loader.validate(config, [])
+    def load_case_test(self, case):
+        return self.loader.load_config(
+            "test/{case}_config.yml".format(case=case),
+            "test/parameters.yml",
+        )
+
+    def test_no_data_nodes(self):
+        config = self.load_case_test("no_leaf_simple")
+        database = {
+            "database": {
+                "host": "localhost",
+                "username": None
+            }
+        }
+        with self.assertRaises(loader.NoValueException):
+            # Raise because username is not in the config and neither have a default value
+            self.loader.build_config(config, [database])
+
+    def test_default_data(self):
+        config = self.load_case_test("no_leaf_simple")
+        database = {
+            "database": {
+                "host": "localhost",
+                "username": "default_username"
+            }
+        }
+        r = self.loader.build_config(config, [database])
+        # In the maping the username field has a defaulf value
+        self.assertEqual(r.database.username, database["database"]["username"])
+
+    def test_extra_attribute(self):
+        config = self.load_case_test("extra_attribute")
+        database = {
+            "database": {
+                "host": "localhost",
+                "username": "default_username"
+            }
+        }
+
+        with self.assertRaises(loader.IgnoredFieldException):
+            # Raise because the field weird_password is in the config file but not in the config mapping
+            self.loader.build_config(config, [database])
+
+        config = self.load_case_test("extra_attribute_root")
+        with self.assertRaises(loader.IgnoredFieldException):
+            # In this case, is an extra root node
+            self.loader.build_config(config, [database])
+
+    def test_nested_object(self):
+        config = self.load_case_test("nested_object")
+        queue = {
+            "queue": {
+                "name": None,
+                "money": {
+                    "currency": None,
+                    "value": None
+                }
+            }
+        }
+        r = self.loader.build_config(config, [queue])
+        self.assertEqual(r.queue.name, "caa")
+        self.assertEqual(r.queue.money.currency, "euro")
+        self.assertEqual(r.queue.money.value, 3)
+
+        # Now a double nested because you dont trust me!
+        config = self.load_case_test("double_nested_object")
+        queue = {
+            "queue": {
+                "name": None,
+                "money": {
+                    "currency": None,
+                    "value": None,
+                    "validity": {
+                        "start": 99,
+                        "end": 199
+                    }
+                }
+            }
+        }
+        r = self.loader.build_config(config, [queue])
+        self.assertEqual(r.queue.name, "caa")
+        self.assertEqual(r.queue.money.currency, "euro")
+        self.assertEqual(r.queue.money.value, 3)
+        self.assertEqual(r.queue.money.validity.start, 10)
+        self.assertEqual(r.queue.money.validity.end, 20)
+
+    def test_nested_object_ignored(self):
+
+        config = self.load_case_test("double_nested_object")
+        queue = {
+            "queue": {
+                "name": None,
+                "money": {
+                    "currency": None,
+                    "value": None
+                }
+            }
+        }
+
+        with self.assertRaises(loader.IgnoredFieldException):
+            # The validity node is in config but not in the mapping
+            self.loader.build_config(config, [queue])
+
+
+        config = self.load_case_test("nested_object")
+        queue = {
+            "queue": {
+                "name": None,
+                "money": {
+                    "currency": None,
+                    "value": None,
+                    "who": {
+                        "you": None,
+                        "me": None
+                    }
+
+                }
+            }
+        }
 
         with self.assertRaises(loader.NodeIsNotConfiguredException):
-            yml_loader.validate(config, [queue])
+            # The who node is in mapping but not in the config
+            self.loader.build_config(config, [queue])
 
-        with self.assertRaises(loader.NodeAlreadyConfiguredException):
-            yml_loader.validate(config, [database, database_again])
 
-    def test_successful(self):
-        yml_loader = loader.YmlLoader()
-        config = yml_loader.load_config("test/config.yml", "test/parameters.yml")
-        database = namedtuple("database", ["name", "number", "file_systems"])
-        # Should not raise exception
-        yml_loader.validate(config, [database])
+    def test_list(self):
+        config = self.load_case_test("list")
+        main = {
+            "main": {
+                "numbers": []
+            }
+        }
 
+        r = self.loader.build_config(config, [main])
+        self.assertIsNotNone(r.main)
+        self.assertEqual(len(r.main.numbers), 5)
+        self.assertEqual(r.main.numbers[0], 1)
+        self.assertEqual(r.main.numbers[1], 2)
+        self.assertEqual(r.main.numbers[2], 4)
+        self.assertEqual(r.main.numbers[3], 8)
+        self.assertEqual(r.main.numbers[4], "inf")
+
+
+    def test_list_with_objects(self):
+        config = self.load_case_test("list_objects")
+        main = {
+            "main": {
+                "users": [
+                    {
+                        "name": None,
+                        "age": None,
+                        "enabled": True
+                    }
+                ]
+            }
+        }
+
+        r = self.loader.build_config(config, [main])
+        self.assertIsNotNone(r.main)
+        self.assertEqual(len(r.main.users), 2)
+        self.assertDictEqual(r.main.users[0]._asdict(), {"name": "pepe", "age": 96, "enabled": True})
+        self.assertDictEqual(r.main.users[1]._asdict(), {"name": "ose lui", "age": 22, "enabled": True})
+
+    def test_list_with_objects_multiple_mapping_error(self):
+        config = self.load_case_test("list_objects")
+        main = {
+            "main": {
+                "users": [
+                    {
+                        "name": None,
+                        "age": None
+                    },
+                    {
+                        "lol": True
+                    }
+                ]
+            }
+        }
+
+        with self.assertRaises(Exception):
+            # The validity node is in config but not in the mapping
+            self.loader.build_config(config, [main])
+
+
+    def full_example(self):
 
 

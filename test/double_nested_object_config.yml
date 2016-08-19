@@ -1,0 +1,8 @@
+queue:
+  name: caa
+  money:
+    currency: euro
+    value: 3
+    validity:
+       start: 10
+       end: 20

@@ -1,0 +1,6 @@
+main:
+   users:
+      - name: pepe
+        age: 96
+      - name: "ose lui"
+        age: 22

@@ -2,17 +2,16 @@ import yaml
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
-class NodeAlreadyConfiguredException(Exception):
-    pass
 
 class NodeIsNotConfiguredException(Exception):
     pass
 
-class NodeHasNoMappingException(Exception):
+class NoValueException(Exception):
     pass
 
-class NodeMappingHasNoName(Exception):
+class IgnoredFieldException(Exception):
     pass
+
 
 class ConfigurationLoader(metaclass=ABCMeta):
     @abstractmethod
@@ -24,124 +23,89 @@ class ConfigurationLoader(metaclass=ABCMeta):
     def load_config(self, config_source, parameters_source):
         pass
 
-    # def validate(self, config_map, validation_mappings):
-    #     processed_nodes = set()
-    #     for mapping in validation_mappings:
-    #         name = mapping.__name__
-    #         if name in config_map:
-    #             if name in processed_nodes:
-    #                 raise NodeAlreadyConfiguredException("Node {node} is already configured".format(node=name))
-    #             else:
-    #                 processed_nodes.add(name)
-    #         else:
-    #             raise NodeIsNotConfiguredException("Node {node} is not configured".format(node=name))
-    #
-    #     unprocessed_nodes = set(config_map.keys()).symmetric_difference(processed_nodes)
-    #     if len(unprocessed_nodes):
-    #         raise NodeHasNoMappingException("The following nodes has no mapping: {nodes}"
-    #                                         .format(nodes=", ".join(list(unprocessed_nodes)))
-    #                                         )
-
-    def build_config(self, data, mapping):
+    def build_config(self, data, mapping, as_namedtuple=True):
         r = {}
         for i in mapping:
             # Root nodes
-            r.update(self._build_root_node(i, data))
+            r.update(self._build_node_config(node_info=i, node_data=data, as_namedtuple=as_namedtuple))
         # Convert data into namedtuple
         config_tuple = namedtuple("Configuration", r.keys())
+        # warn about unsued root nodes configuration
+        extra_fields = set(data.keys()).difference(set(r.keys()))
+
+        if len(extra_fields) > 0:
+            raise IgnoredFieldException("The root nodes [{nodes}] are ignored in your mapping".format(nodes=", ".join(extra_fields)))
         return config_tuple(**r)
 
-    def _build_root_node(self, node, data):
-        built_data = {}
-        if isinstance(node, dict):
-            # Es un tipo compuesto
-            built_data.update(self._build_node_level(node, data))
-        else:
-            # Es un tipo simple
-            built_data[node.__name__] = node(**self._get_node_data(node, data))
-        return built_data
+    def _build_node_config(self, node_info, node_data, namespace=None, as_namedtuple=True):
+        built_config = {}
+        # This set is used to check unsued configuration
+        processed_nodes = set()
 
-    def _build_node_level(self, node, data):
-        built_data = {}
-        for node_definition, sub_elements in node.items():
-            node_name = node_definition.__name__
-            node_built_data = {}
-            node_data = self._get_node_data(node_definition, data)
-            # Usamos mapped_sub_elemnts para que al recorrer los atributos de la namedtuple podamos buscar facilmente
-            # si es un nodo hoja u otro subnodo
-            if sub_elements is not None:
-                # Tiene definicion para los atributos
-                mapped_sub_elements = {s.__name__: s for s in sub_elements}
-            else:
-                # No tiene definicion, todos sus nodos son hoja
-                mapped_sub_elements = {}
+        for node, node_content in node_info.items():
+            processed_nodes.add(node)
+            new_namespace = "{namespace}:{node}".format(namespace=namespace, node=node) if namespace is not None else node
+            if isinstance(node_content, dict):
+                # Node
+                d = self._get_node_data(node, node_data, namespace)
+                built_config[node] = self._build_node_config(node_content, d, "{namespace}:{node}".format(namespace=namespace, node=node) if namespace is not None else node, as_namedtuple)
+            elif isinstance(node_content, list):
+                # List node
+                node_len = len(node_content)
+                if node_len == 0:
+                    # Simple list
+                    d = self._get_node_data(node, node_data, "{namespace}:{node}".format(namespace=namespace, node=node) if namespace is not None else node)
+                    built_config[node] = d
+                elif node_len == 1:
+                    # Object list
+                    # The node structure is defined in the first element
+                    node_structure = node_content[0]
+                    node_config_processed = []
+                    d = self._get_node_data(node, node_data, namespace)
+                    for index in range(len(d)):
+                        # The wrong element is specified by using it index
+                        node_config_processed.append(self._build_node_config(node_structure, d[index], new_namespace+"_"+str(index), as_namedtuple))
 
-            for field in node_definition._fields:
-                if field in mapped_sub_elements:
-                    # Sub elemento
-                    # Como estamos recorriendo usando el string field, mapped_sub_elements[field] contiene el namedtuple
-                    # por el que está indexado el mapa de configuración
-
-                    sub_element = sub_elements[mapped_sub_elements[field]]
-                    if sub_element is None:
-                        # Este sub elemento es un nodo hoja
-                        node_built_data[field] = mapped_sub_elements[field](**node_data[field])
-                    else:
-                        node_built_data[field] = self._build_node_level(sub_element, node_data[field])
-
+                    built_config[node] = node_config_processed
                 else:
-                    # El campo es nodo hoja
-                    node_built_data[field] = node_data[field]
-
-            built_data[node_name] = node_definition(**node_built_data)
-        return built_data
-
-    def _validate_node(self, node, data):
-        # Root nodes are special because they dont have a parent. Here we start the recursion
-        if not isinstance(node, dict):
-            # Simple mapping
-            return {node.__name__: node(**self._get_node_data(node, data))}
-        else:
-            # Complex mapping
-            # First get the node name
-            if "_" in node:
-                return {node["_"].__name__: self._validate_level("_", node, self._get_node_data(node["_"], data))}
+                    raise Exception("Object list mapping should have only one element at {node}".format(node=node))
             else:
-                raise NodeMappingHasNoName()
+                # Leaf node
+                if node in node_data:
+                    # El valor de la configuración
+                    built_config[node] = self._get_node_data(node, node_data, namespace)
+                elif node_content is not None:
+                    # El valor por defecto, si tiene
+                    built_config[node] = node_content
+                else:
+                    raise NoValueException("No value for node {node}".format(node=new_namespace))
+
+        # Only check if it is not the root node because every root node sees as "ignored" others roots nodes
+        if namespace is not None:
+            extra_fields = list(set(node_data.keys()).difference(processed_nodes))
+            if len(extra_fields) > 0:
+                with_namespace = ["{namespace}:{field}".format(namespace=namespace, field=field)for field in extra_fields]
+                raise IgnoredFieldException(
+                    "The nodes [{nodes}] are ignored in your mapping".format(nodes=", ".join(with_namespace)))
+
+        if as_namedtuple:
+            if namespace is None:
+                # Root, return as dict
+                return built_config
+            else:
+                name = namespace.split(":")[-1]
+                node_namedtumple = namedtuple(name, built_config.keys())
+                #print(name, built_config.keys(), built_config)
+                return node_namedtumple(**built_config)
+        else:
+            return built_config
 
     """ Function to get node data or throw exception if no data for the node"""
-    def _get_node_data(self, node, data, namespace=None):
-        node_name = node.__name__
-        if node_name not in data:
-            raise NodeIsNotConfiguredException("Node {node} is not configured".format(node=node_name))
+    def _get_node_data(self, node, data, namespace):
+        if node not in data:
+            raise NodeIsNotConfiguredException("Node {namespace}:{node} is not configured".format(node=node, namespace=namespace))
         else:
-            return data[node_name] if namespace is None else data["{namespace}_{node_name}".format(namespace=namespace, node_name=node_name)]
-
-    def _validate_level(self, attribute, node, data, namespace=None):
-        node_structure = node[attribute]
-        node_name = node_structure.__name__
-
-        node_built_data = {}
-        # Check every field of the namedtuple
-        for field in node_structure._fields:
-            namespaced = namespace if namespace is not None else "" + "_" + field
-            if field in node or namespaced in node:
-                if namespaced in node:
-                    field = namespaced
-                # Is an another node
-                print("{field} es otro nodo".format(field=field))
-                new_namespace = field if namespace is None else "{parent}_{me}".format(parent=namespace, me=field)
-                node_built_data[field] = self._validate_level(new_namespace, node, self._get_node_data(node[field], data, namespace), new_namespace)
-                #node_built_data[field] = new_namespace
-            else:
-                # Is a leaf node
-                print("{field} es hoja".format(field=field))
-                node_built_data[field] = data[field]
-        return node_structure(**node_built_data)
-
-
-
-        #main = namedtuple('Configuration', load_mappings(mapping_modules))
+            return data[node]
 
 
 class YmlLoader(ConfigurationLoader):
@@ -158,7 +122,3 @@ class YmlLoader(ConfigurationLoader):
             final_configuration = config_raw.format(**self.load_parameters(parameters_source))
             return yaml.safe_load(final_configuration)
 
-
-
-# Testear, complex mapping sin node name (el de _)
-# Testear que el complex no está configurado
