@@ -1,0 +1,3 @@
+database_driver: mysql
+database_hostname: localhost
+database_password: root

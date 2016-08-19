@@ -1,0 +1,7 @@
+database:
+  driver: {database_driver}
+  hostname: {database_hostname}
+  username: {database_password}
+
+
+

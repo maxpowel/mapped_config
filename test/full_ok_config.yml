@@ -26,5 +26,4 @@ queue:
 
 simple:
     greet: hello
-    friend: how are you
 

@@ -1,3 +1,9 @@
-currency: euro
-file_system_mongo_server_port: 445
-file_system_mongo_server_hostname: localhost
+database_default: mysql
+mysql_hostname: localhost
+mysql_password: 1234565
+postgres_hostname: localhost
+postgres_password: 1234565
+amazon_bucket: images
+azure_storage: images
+local_directory: /media/images
+queue_max_instances: 14

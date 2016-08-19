@@ -1,13 +1,13 @@
 database:
   default: {database_default}
   providers:
-     - name: mysql
-       hostname: {mysql_hostname}
-       username: {mysql_password}
+    - name: mysql
+      hostname: {mysql_hostname}
+      username: {mysql_password}
 
     - name: postgres
-       hostname: {postgres_hostname}
-       username: {postgres_password}
+      hostname: {postgres_hostname}
+      username: {postgres_password}
 
 persistence:
   amazon:
@@ -28,13 +28,12 @@ queue:
    max_instances: {queue_max_instances}
    workers:
       - name: cpu_intensive
-        schduler_plans:
-            low:
-               jump_order: [1, 3, 5, 7]
-      - name: io_high_throughput
+        scheduler_plans:
+            low: [1, 3, 5, 7]
+            high: [10]
       - name: video_encoding
-            schduler_plans:
-            high:
-               jump_order: [2, 4, 6, 8]
+        scheduler_plans:
+            low: [1]
+            high: [2, 4, 6, 8]
 
 

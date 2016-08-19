@@ -1,5 +1,4 @@
 queue:
-  name: caa
   number:
     currency: euro
     value: 3
@@ -27,8 +26,3 @@ queue:
 simple:
     greet: hello
     friend: how are you
-
-
-
-deprecated:
-    since: 1914

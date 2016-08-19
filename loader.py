@@ -6,8 +6,10 @@ from collections import namedtuple
 class NodeIsNotConfiguredException(Exception):
     pass
 
+
 class NoValueException(Exception):
     pass
+
 
 class IgnoredFieldException(Exception):
     pass
@@ -72,10 +74,10 @@ class ConfigurationLoader(metaclass=ABCMeta):
             else:
                 # Leaf node
                 if node in node_data:
-                    # El valor de la configuración
+                    # The specified value in the configuration
                     built_config[node] = self._get_node_data(node, node_data, namespace)
                 elif node_content is not None:
-                    # El valor por defecto, si tiene
+                    # The default value specified in the mapping, if any
                     built_config[node] = node_content
                 else:
                     raise NoValueException("No value for node {node}".format(node=new_namespace))
@@ -95,7 +97,6 @@ class ConfigurationLoader(metaclass=ABCMeta):
             else:
                 name = namespace.split(":")[-1]
                 node_namedtumple = namedtuple(name, built_config.keys())
-                #print(name, built_config.keys(), built_config)
                 return node_namedtumple(**built_config)
         else:
             return built_config

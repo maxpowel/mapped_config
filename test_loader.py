@@ -1,6 +1,6 @@
 import unittest
 import loader
-from collections import namedtuple
+
 
 class TestYmlLoader(unittest.TestCase):
 
@@ -42,6 +42,8 @@ class TestConfigurationBuilder(unittest.TestCase):
 
     def test_no_data_nodes(self):
         config = self.load_case_test("no_leaf_simple")
+        # None value means no default, requiered value
+        # Any other value means that this is the default value
         database = {
             "database": {
                 "host": "localhost",
@@ -137,7 +139,6 @@ class TestConfigurationBuilder(unittest.TestCase):
             # The validity node is in config but not in the mapping
             self.loader.build_config(config, [queue])
 
-
         config = self.load_case_test("nested_object")
         queue = {
             "queue": {
@@ -158,7 +159,6 @@ class TestConfigurationBuilder(unittest.TestCase):
             # The who node is in mapping but not in the config
             self.loader.build_config(config, [queue])
 
-
     def test_list(self):
         config = self.load_case_test("list")
         main = {
@@ -175,7 +175,6 @@ class TestConfigurationBuilder(unittest.TestCase):
         self.assertEqual(r.main.numbers[2], 4)
         self.assertEqual(r.main.numbers[3], 8)
         self.assertEqual(r.main.numbers[4], "inf")
-
 
     def test_list_with_objects(self):
         config = self.load_case_test("list_objects")
@@ -217,7 +216,61 @@ class TestConfigurationBuilder(unittest.TestCase):
             # The validity node is in config but not in the mapping
             self.loader.build_config(config, [main])
 
+    def test_full_example_ok(self):
+        # Load a full example, everything should be ok because we tested every part individually
+        config = self.load_case_test("full_ok")
 
-    def full_example(self):
+        queue = {
+            "queue": {
+                "name": None,
+                "number": {
+                    "currency": None,
+                    "value": None
+                },
+                "file_systems": {
+                    "mongo": {
+                        "server": {
+                            "hostname": "localhost",
+                            "port": 45
+                        },
+                        "username": None
+                    }
+                },
+                "handlers": [{
+                    "name": None,
+                    "version": {
+                        "model": None,
+                        "year": None
+                    },
+                    "years": [],
+                    "months": [],
+                }]
 
+            }
+        }
+
+        simple = {
+            "simple": {
+                "greet": None,
+                "friend": "of mine"
+            }
+        }
+        r = self.loader.build_config(config, [queue, simple])
+        self.assertEqual(r.queue.name, "caa")
+        self.assertEqual(r.queue.file_systems.mongo.server.port, 344)
+        self.assertEqual(len(r.queue.handlers), 2)
+        self.assertEqual(r.simple.greet, "hello")
+        self.assertEqual(r.simple.friend, "of mine")
+
+        # Now we test with some extra config
+        config = self.load_case_test("full_extra")
+        with self.assertRaises(loader.IgnoredFieldException):
+            # Raise because the field weird_password is in the config file but not in the config mapping
+            self.loader.build_config(config,  [queue, simple])
+
+        # Now with insufficient config (remove the name attribute which is mandatory)
+        config = self.load_case_test("full_extra_mapping")
+        with self.assertRaises(loader.NoValueException):
+            # Raise because the field weird_password is in the config file but not in the config mapping
+            self.loader.build_config(config,  [queue, simple])
 
