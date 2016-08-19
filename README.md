@@ -191,10 +191,55 @@ database:
 You can nest everything into everything. If you can build it with yml
 you can map it
 
+Can I use JSON?
+---------------
+Sure, just load the the JsonLoader instead of YmlLoader
+
+```python
+from mapped_config.loader import JsonLoader
+
+database_config_schema = {
+    "database": {
+        "driver": None, # None means no default value
+        "hostname": "localhost", # Default value is localhost
+        "username": "root",
+        "password": "123456",
+        "port": None
+    }
+
+}
+
+json_loader = loader.JsonLoader()
+config = json_loader.load_config("example_simple_config.json", "example_simple_parameters.json")
+mapped_config = json_loader.build_config(config, [database_config_schema])
+
+print(mapped_config)
+
+database_config = mapped_config.database
+
+print(database_config.hostname)
+print(database_config.username)
+print(database_config.password)
+print(database_config.driver)
+```
+
+Json uses braces which conflicts with the replacement format used before.
+The json loader repalces the braces {var} for the percent symbol %value%
+ 
+```json
+{
+  "database": {
+          "driver": %database_driver%,
+          "hostname": %database_hostname%,
+          "username": %database_password%,
+          "port": %database_port%
+  }
+}
+```
 
 Extending to other formats
 --------------------------
-I love YML but other people likes JSON, XML and other formats. To use them, just
+I love YML but other people likes XML and other formats. To use them, just
 extend the class ConfigurationLoader and implement its interface (just two methods
 what basically converts your raw file into a dictionary)
 

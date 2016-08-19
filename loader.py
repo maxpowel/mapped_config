@@ -1,4 +1,6 @@
 import yaml
+import json
+import re
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
@@ -123,3 +125,28 @@ class YmlLoader(ConfigurationLoader):
             final_configuration = config_raw.format(**self.load_parameters(parameters_source))
             return yaml.safe_load(final_configuration)
 
+class JsonLoader(ConfigurationLoader):
+    def __init__(self):
+        self.parameters = None
+
+    def load_parameters(self, source):
+        """For JSON, the source it the file path"""
+        with open(source) as parameters_source:
+            return json.loads(parameters_source.read())
+
+    def load_config(self, config_source, parameters_source):
+        """For JSON, the source it the file path"""
+        with open(config_source) as config_source:
+            config_raw = config_source.read()
+            """Replace the parameters"""
+            pattern = "(%[a-zA-Z_0-9]*%)"
+            self.parameters = self.load_parameters(parameters_source)
+            replaced_config = re.sub(pattern=pattern, repl=self._replace_function, string=config_raw)
+            return json.loads(replaced_config)
+
+    def _replace_function(self, match):
+        # Remove % from the begining and from the end
+        parameter_key = match.group(0)[1:-1]
+        value = self.parameters[parameter_key]
+        # Add the " for string values
+        return str(value) if str(value).isdigit() else '"{value}"'.format(value=value)
