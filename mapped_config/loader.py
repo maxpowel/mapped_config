@@ -3,6 +3,7 @@ import json
 import re
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
+import six
 
 
 class NodeIsNotConfiguredException(Exception):
@@ -17,7 +18,8 @@ class IgnoredFieldException(Exception):
     pass
 
 
-class ConfigurationLoader(metaclass=ABCMeta):
+@six.add_metaclass(ABCMeta)
+class ConfigurationLoader(object):
     @abstractmethod
     def load_parameters(self, source):
         """Convert the source into a dictionary"""
