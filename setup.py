@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'mapped_config',
   packages = ['mapped_config'],
-  version = '1.1',
+  version = '1.11',
   description = 'Mapped config loader for python for secure, easy and modular configuration management',
   author = 'Alvaro Garcia Gomez',
   author_email = 'maxpowel@gmail.com',
