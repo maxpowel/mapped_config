@@ -4,7 +4,7 @@ import re
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 import six
-
+import os
 
 class NodeIsNotConfiguredException(Exception):
     pass
@@ -123,8 +123,17 @@ class YmlLoader(ConfigurationLoader):
         """For YML, the source it the file path"""
         with open(config_source) as config_source:
             config_raw = config_source.read()
+
+            parameters = {}
+            """Parameteres from file"""
+            if os.path.isfile(parameters_source):
+                parameters.update(self.load_parameters(parameters_source))
+
+            """Overwrite parameteres with the environment variables"""
+            parameters.update(os.environ)
+
             """Replace the parameters"""
-            final_configuration = config_raw.format(**self.load_parameters(parameters_source))
+            final_configuration = config_raw.format(**parameters)
             return yaml.safe_load(final_configuration)
 
 class JsonLoader(ConfigurationLoader):
@@ -142,7 +151,15 @@ class JsonLoader(ConfigurationLoader):
             config_raw = config_source.read()
             """Replace the parameters"""
             pattern = "(%[a-zA-Z_0-9]*%)"
-            self.parameters = self.load_parameters(parameters_source)
+
+            self.parameters = {}
+            """Parameteres from file"""
+            if os.path.isfile(parameters_source):
+                self.parameters.update(self.load_parameters(parameters_source))
+
+            """Overwrite parameteres with the environment variables"""
+            self.parameters.update(os.environ)
+
             replaced_config = re.sub(pattern=pattern, repl=self._replace_function, string=config_raw)
             return json.loads(replaced_config)
 
@@ -152,3 +169,4 @@ class JsonLoader(ConfigurationLoader):
         value = self.parameters[parameter_key]
         # Add the " for string values
         return str(value) if str(value).isdigit() else '"{value}"'.format(value=value)
+

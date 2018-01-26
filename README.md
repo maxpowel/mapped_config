@@ -261,6 +261,10 @@ what basically converts your raw file into a dictionary).
 You can mix formats and use json for config and yml for parameters or whatever you want,
 just extend the base class and custom the load process.
 
+Parameters preference
+---------------------
+You can also configure parameters by using environment variables (just use parameter as the env variable). From the lower to higher preference, the preferences are: default value, parameters file and parameters in environment variables
+
 Tests
 -----
 Just run 
