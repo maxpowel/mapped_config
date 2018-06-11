@@ -128,7 +128,7 @@ class YmlLoader(ConfigurationLoader):
             if os.path.isfile(parameters_source):
                 params = self.load_parameters(parameters_source)
                 if params is not None:
-                    parameters.update()
+                    parameters.update(params)
 
             """Overwrite parameteres with the environment variables"""
             parameters.update(os.environ)
