@@ -1,0 +1,16 @@
+language: python
+python:
+- '2.7'
+- '3.6'
+env:
+  global:
+  - PYTHONPATH="."
+script: python mapped_config/test/test_schema_generator.py
+deploy:
+  provider: pypi
+  user: maxpowel
+  password:
+    secure: S/bZ8lgWK1f3j3Qo8Q1aiNs/LHdIam40EtD/pDyuVMUClfLif/KO/Y/dJhfQQMMPawyP0HvJ6b7soFnP79/Oxa2fxM2kNQYLxHDa42l3qC2F5AV2rJdZKJq+4MIMprwp9eiNuRCF0Bvo6flRNeI7F18DrqBCqDAKKj8LuNS+tkBQTagpThO52S8DR5i0mj0yKOWhp+7xVTZZGXXLFIe9XGqNTAu8cZir9hajPwsv394UcY3FqlTATDO7W7oEjzMwH/5aWGdXQmuYz2JyGM33WAqBKdAmE5YPJ+/NllF9UZ3x0S63tWZc7Fa0MzExP7Xwcoa5w1gZlxENBqFXfIeH1pMh/EMuzSXA7b194+SvolldDKfEbux/fUIiW1W5bz0E0wdzhBAm+iWivJlgVryhSg0Gr01AhtqE560P/vOJBI8nlOq1rGTdz0PgPmqbhSLULM9Q0hSVP3iTZCyH+B3OEoVyAXGyARnjArSyGuotkdzp4IWtPYTWwz72XPa4aS7HdRIPPSfBbrLlZSgTgq5XGADeqZlvdxwOwj7kp5c5m1a45ShUWnuEih9PBdmXCN3na03oe+9jJufE0bPeM789zIs85cWgVbn80wlaOoa/RwCWQA4SMGMrDaRAOFR+yLPH71OCWI0+xuKoIXeNC70B3IsfBZ63msyiPFjiVr9xLjI=
+  distributions: bdist_wheel
+  on:
+    tags: true

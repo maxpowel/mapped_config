@@ -2,20 +2,97 @@ import yaml
 import json
 import re
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple
 import six
 import os
+from cerberus import Validator
+from collections import namedtuple
 
-class NodeIsNotConfiguredException(Exception):
-    pass
+class InvalidDataException(Exception):
+    def __init__(self, errors):
+        self.errors = errors
 
 
-class NoValueException(Exception):
-    pass
+def dict_to_namedtuple(dictionary):
+    for key, value in dictionary.items():
+            if isinstance(value, dict):
+                dictionary[key] = dict_to_namedtuple(value)
+            elif isinstance(value, list):
+                el = []
+                for i in value:
+                    el.append(dict_to_namedtuple(i))
+                dictionary[key] = el
+    return namedtuple('Configuration', dictionary.keys())(**dictionary)
 
 
-class IgnoredFieldException(Exception):
-    pass
+type_map = {
+    int: "integer",
+    str: "string",
+    float: "float"
+}
+def mapped_to_cerberus(d):
+
+    for key, value in d.items():
+
+        if value is None:
+            d[key] = {"required": True}
+        elif isinstance(value, dict):
+            if "type" not in value:
+                schema_dict = {"type": "dict", "default": {}, "schema": mapped_to_cerberus(value)}
+                d[key] = schema_dict
+
+        elif isinstance(value, list):
+            if len(value) > 0:
+                schema_list = mapped_to_cerberus({"_":value[0]})["_"]
+            else:
+                schema_list = {}
+            d[key] = {"type": "list", "default": [], "schema": schema_list}
+        else:
+
+                new_value = {
+                    "type": type_map[type(value)],
+                    "default": value,
+                    "required": False
+                }
+                d[key] = new_value
+
+
+
+    return d
+
+
+
+
+def build_config(mapped_schema, config_data, as_named_tuple=True):
+    if not isinstance(mapped_schema, dict):
+        mapped_schema = mapped_schema.build()
+
+    cer = mapped_to_cerberus(mapped_schema)
+    v = Validator(cer)
+    if v.validate(config_data):
+        if as_named_tuple:
+            config = dict_to_namedtuple(v.document)
+        else:
+            config = v.document
+        return config
+    else:
+        raise InvalidDataException(format_errors(v.errors))
+
+
+
+def format_errors(errors, prefix=[]):
+    error_list = []
+    for key, value in errors.items():
+        for err in value:
+            node_prefix = prefix + [str(key)]
+            if isinstance(err, dict):
+                error_list += format_errors(err, node_prefix)
+            else:
+                error_list.append("Field [{field}] {desc}".format(field=":".join(node_prefix), desc=err))
+    return error_list
+
+
+
+
 
 
 @six.add_metaclass(ABCMeta)
@@ -30,87 +107,8 @@ class ConfigurationLoader(object):
         pass
 
     def build_config(self, data, mapping, as_namedtuple=True):
-        r = {}
-        for i in mapping:
-            # Root nodes
-            r.update(self._build_node_config(node_info=i, node_data=data, as_namedtuple=as_namedtuple))
-        # Convert data into namedtuple
-        config_tuple = namedtuple("Configuration", r.keys())
-        # warn about unsued root nodes configuration
-        extra_fields = set(data.keys()).difference(set(r.keys()))
+        return build_config(mapped_schema=mapping, config_data=data, as_named_tuple=as_namedtuple)
 
-        if len(extra_fields) > 0:
-            raise IgnoredFieldException("The root nodes [{nodes}] are ignored in your mapping".format(nodes=", ".join(extra_fields)))
-        return config_tuple(**r)
-
-    def _build_node_config(self, node_info, node_data, namespace=None, as_namedtuple=True):
-        built_config = {}
-        # This set is used to check unsued configuration
-        processed_nodes = set()
-
-        for node, node_content in node_info.items():
-            processed_nodes.add(node)
-            new_namespace = "{namespace}:{node}".format(namespace=namespace, node=node) if namespace is not None else node
-            if isinstance(node_content, dict):
-                # Node
-                d = self._get_node_data(node, node_data, namespace)
-                built_config[node] = self._build_node_config(node_content, d, "{namespace}:{node}".format(namespace=namespace, node=node) if namespace is not None else node, as_namedtuple)
-            elif isinstance(node_content, list):
-                # List node
-                node_len = len(node_content)
-                if node_len == 0:
-                    # Simple list
-                    d = self._get_node_data(node, node_data, "{namespace}:{node}".format(namespace=namespace, node=node) if namespace is not None else node)
-                    built_config[node] = d
-                elif node_len == 1:
-                    # Object list
-                    # The node structure is defined in the first element
-                    node_structure = node_content[0]
-                    node_config_processed = []
-                    d = self._get_node_data(node, node_data, namespace)
-                    for index in range(len(d)):
-                        # The wrong element is specified by using it index
-                        node_config_processed.append(self._build_node_config(node_structure, d[index], new_namespace+"_"+str(index), as_namedtuple))
-
-                    built_config[node] = node_config_processed
-                else:
-                    raise Exception("Object list mapping should have only one element at {node}".format(node=node))
-            else:
-                # Leaf node
-                if node in node_data:
-                    # The specified value in the configuration
-                    built_config[node] = self._get_node_data(node, node_data, namespace)
-                elif node_content is not None:
-                    # The default value specified in the mapping, if any
-                    built_config[node] = node_content
-                else:
-                    raise NoValueException("No value for node {node}".format(node=new_namespace))
-
-        # Only check if it is not the root node because every root node sees as "ignored" others roots nodes
-        if namespace is not None:
-            extra_fields = list(set(node_data.keys()).difference(processed_nodes))
-            if len(extra_fields) > 0:
-                with_namespace = ["{namespace}:{field}".format(namespace=namespace, field=field)for field in extra_fields]
-                raise IgnoredFieldException(
-                    "The nodes [{nodes}] are ignored in your mapping".format(nodes=", ".join(with_namespace)))
-
-        if as_namedtuple:
-            if namespace is None:
-                # Root, return as dict
-                return built_config
-            else:
-                name = namespace.split(":")[-1]
-                node_namedtumple = namedtuple(name, built_config.keys())
-                return node_namedtumple(**built_config)
-        else:
-            return built_config
-
-    """ Function to get node data or throw exception if no data for the node"""
-    def _get_node_data(self, node, data, namespace):
-        if node not in data:
-            raise NodeIsNotConfiguredException("Node {namespace}:{node} is not configured".format(node=node, namespace=namespace))
-        else:
-            return data[node]
 
 
 class YmlLoader(ConfigurationLoader):

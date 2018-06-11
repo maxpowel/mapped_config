@@ -1,5 +1,8 @@
 Mapped config
 =============
+
+[![Build Status](https://travis-ci.org/maxpowel/mapped_config.svg?branch=master)](https://travis-ci.org/maxpowel/mapped_config)
+
 How to install
 ---------------
 pip install mapped_config
@@ -194,6 +197,58 @@ database:
 You can nest everything into everything. If you can build it with yml
 you can map it
 
+* Advanced validation
+You can also check the data type
+```python
+database_config_schema = {
+    "database": {
+        "drivers": [{
+             "name": {"type": "string"},
+             "version": {"tỳpe": "integer", "default": 0}
+        }]
+    }
+
+}
+```
+
+Schema constructor
+------------------
+Writing schemas like this is very simple and for small cases is enough. But because you have to write manually
+the whole structure, it can contains errors like typos. You can avoid that using the schema constructor.
+
+Manual schema definition
+```python
+database_config_schema = {
+    "database": {
+        "drivers": [{
+             "name": {"type": "string"},
+             "version": {"tỳpe": "integer", "default": 0}
+        }]
+    }
+
+}
+```
+Equivalent with constructor
+```python
+from mapped_config import constructor
+database_config_schema = constructor.MultiField(name="database", fields=[
+    constructor.MultiField(name="drivers", fields=[
+        constructor.StringField("name"),
+        constructor.IntegerField("version", default=0)
+    ])
+])
+```
+You can build any structure with that.
+* Simple field: StringField, IntegerField....
+* Dictionary: MultiField
+* List: ListField
+
+You can check the file examples/raw_vs_classes_example.py to view more examples.
+
+And thats all. You can check your final mapping by calling he method "build" of the constructor field.
+
+Both ways (raw schema and constructor) are equals, just choose what more comfortable to you!
+
 Can I use JSON?
 ---------------
 Sure, just load the the JsonLoader instead of YmlLoader
@@ -269,4 +324,4 @@ Tests
 -----
 Just run 
 
-python -m unittest
+python mapped_config/test/test_schema_generator.py
