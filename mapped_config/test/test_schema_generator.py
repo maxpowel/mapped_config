@@ -130,8 +130,8 @@ class TestYmlLoader(unittest.TestCase):
         yml_loader = loader.YmlLoader()
         test_parameters = yml_loader.load_parameters(os.path.join(self.dir_path,"parameters.yml"))
         real_parameters = {
-            "database_host": "localhost",
-            "database_username": "root",
+            "database_host": "'localhost'",
+            "database_username": "'root'",
             "a_pretty_list": [1, 2, {"who_am_i": "an object"}]
         }
         self.assertDictEqual(real_parameters, test_parameters, "Parameters were not loaded correctly")
