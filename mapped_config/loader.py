@@ -27,7 +27,8 @@ def dict_to_namedtuple(dictionary):
 type_map = {
     int: "integer",
     str: "string",
-    float: "float"
+    float: "float",
+    bool: "boolean"
 }
 def mapped_to_cerberus(d):
 
@@ -125,14 +126,18 @@ class YmlLoader(ConfigurationLoader):
             parameters = {}
             """Parameteres from file"""
             if os.path.isfile(parameters_source):
-                parameters.update(self.load_parameters(parameters_source))
+                params = self.load_parameters(parameters_source)
+                if params is not None:
+                    parameters.update()
 
             """Overwrite parameteres with the environment variables"""
             parameters.update(os.environ)
 
             """Replace the parameters"""
             final_configuration = config_raw.format(**parameters)
-            return yaml.safe_load(final_configuration)
+            final_configuration = yaml.safe_load(final_configuration)
+            return final_configuration if final_configuration is not None else {}
+
 
 class JsonLoader(ConfigurationLoader):
     def __init__(self):
