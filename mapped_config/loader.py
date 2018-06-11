@@ -116,11 +116,11 @@ class YmlLoader(ConfigurationLoader):
     def load_parameters(self, source):
         """For YML, the source it the file path"""
         with open(source) as parameters_source:
-        loaded = yaml.safe_load(parameters_source.read())
-        for k, v in loaded.items():
-            if isinstance(v, str):
-                loaded[k] = "'"+v+"'"
-        return loaded
+            loaded = yaml.safe_load(parameters_source.read())
+            for k, v in loaded.items():
+                if isinstance(v, str):
+                    loaded[k] = "'"+v+"'"
+            return loaded
 
     def load_config(self, config_source, parameters_source):
         """For YML, the source it the file path"""
