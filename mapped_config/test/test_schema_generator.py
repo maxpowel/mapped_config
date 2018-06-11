@@ -3,6 +3,7 @@ from mapped_config.constructor import MultiField, IntegerField, StringField, Lis
 from mapped_config import loader
 import os
 import unittest
+import six
 
 class TestSchemaGenerator(unittest.TestCase):
 
@@ -64,61 +65,62 @@ class TestSchemaGenerator(unittest.TestCase):
         self.assertDictEqual(mapped_to_cerberus({"field": None}), {'field': {'required': True}})
 
 # The same but using the schema consctructor
-class TestSchemaConstructor(unittest.TestCase):
+if six.PY3:
+    class TestSchemaConstructor(unittest.TestCase):
 
-    def test_simple_object(self):
-        mapped_schema = MultiField([IntegerField("number", 12345)])
+        def test_simple_object(self):
+            mapped_schema = MultiField([IntegerField("number", 12345)])
 
-        data = {
-            "number": 56
-        }
-
-        c = build_config(mapped_schema, data)
-        self.assertEqual(c.number, data["number"])
-
-        with self.assertRaises(InvalidDataException):
-            build_config(mapped_schema, {"number": "string"})
-
-        # Extra field
-        with self.assertRaises(InvalidDataException):
-            build_config(mapped_schema, {"number": 123, "extra_field": "testing"})
-
-    def test_nested_object(self):
-
-        schema = MultiField([
-            MultiField(name="auth", fields=[
-                StringField("username", "root")
-            ])
-        ])
-
-        data = {
-            "auth": {
-                "username": "user"
+            data = {
+                "number": 56
             }
-        }
-        c = build_config(schema, data)
-        self.assertEqual(c.auth.username, data["auth"]["username"])
 
-        # Default value
-        c = build_config(schema, {})
-        self.assertEqual(c.auth.username, "root")
+            c = build_config(mapped_schema, data)
+            self.assertEqual(c.number, data["number"])
 
-        with self.assertRaises(InvalidDataException):
-            build_config(schema, {"auth": {"username": 123}})
+            with self.assertRaises(InvalidDataException):
+                build_config(mapped_schema, {"number": "string"})
 
-    def test_list(self):
-        schema = MultiField([
-            ListField("hosts", MultiField([
-                StringField("ip", "192.168.2.1"),
-                IntegerField("port", 5000)
-            ]))
-        ])
-        data = {"hosts": [{"ip": "192.168.2.1", "port": 5000}, {"ip": "192.168.2.4", "port": 6000}]}
+            # Extra field
+            with self.assertRaises(InvalidDataException):
+                build_config(mapped_schema, {"number": 123, "extra_field": "testing"})
 
-        c = build_config(schema, data)
-        self.assertEqual(c.hosts[1].ip, data["hosts"][1]["ip"])
-        with self.assertRaises(InvalidDataException):
-            build_config(schema, {"hosts": [{"ip": "192.168.2.4", "port": "6000"}]})
+        def test_nested_object(self):
+
+            schema = MultiField([
+                MultiField(name="auth", fields=[
+                    StringField("username", "root")
+                ])
+            ])
+
+            data = {
+                "auth": {
+                    "username": "user"
+                }
+            }
+            c = build_config(schema, data)
+            self.assertEqual(c.auth.username, data["auth"]["username"])
+
+            # Default value
+            c = build_config(schema, {})
+            self.assertEqual(c.auth.username, "root")
+
+            with self.assertRaises(InvalidDataException):
+                build_config(schema, {"auth": {"username": 123}})
+
+        def test_list(self):
+            schema = MultiField([
+                ListField("hosts", MultiField([
+                    StringField("ip", "192.168.2.1"),
+                    IntegerField("port", 5000)
+                ]))
+            ])
+            data = {"hosts": [{"ip": "192.168.2.1", "port": 5000}, {"ip": "192.168.2.4", "port": 6000}]}
+
+            c = build_config(schema, data)
+            self.assertEqual(c.hosts[1].ip, data["hosts"][1]["ip"])
+            with self.assertRaises(InvalidDataException):
+                build_config(schema, {"hosts": [{"ip": "192.168.2.4", "port": "6000"}]})
 
 
 class TestYmlLoader(unittest.TestCase):
