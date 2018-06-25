@@ -135,7 +135,13 @@ class YmlLoader(ConfigurationLoader):
                     parameters.update(params)
 
             """Overwrite parameteres with the environment variables"""
-            parameters.update(os.environ)
+            env_params = {}
+            env_params.update(os.environ)
+            for k, v in env_params.items():
+                if not v.isdigit():
+                    env_params[k] = "'" + v + "'"
+
+            parameters.update(env_params)
 
             """Replace the parameters"""
             final_configuration = config_raw.format(**parameters)
