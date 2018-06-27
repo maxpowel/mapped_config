@@ -24,6 +24,17 @@ def dict_to_namedtuple(dictionary):
     return namedtuple('Configuration', dictionary.keys())(**dictionary)
 
 
+def is_string(value):
+    try:
+        float(value)
+        return False
+    except ValueError:
+        if value.lower() in ["true", "false"]:
+            return False
+        else:
+            return True
+
+
 type_map = {
     int: "integer",
     str: "string",
@@ -138,7 +149,7 @@ class YmlLoader(ConfigurationLoader):
             env_params = {}
             env_params.update(os.environ)
             for k, v in env_params.items():
-                if not v.isdigit():
+                if is_string(v):
                     env_params[k] = "'" + v + "'"
 
             parameters.update(env_params)
