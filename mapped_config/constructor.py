@@ -42,6 +42,9 @@ class FloatField(TypeField):
 class StringField(TypeField):
     data_type = "string"
 
+class BooleanField(TypeField):
+    data_type = "boolean"
+
 class ListField(object):
 
     def __init__(self, name, field=None):
@@ -52,4 +55,5 @@ class ListField(object):
             self.field = field
     def build(self):
         return {self.name: [self.field.build()]}
+
 

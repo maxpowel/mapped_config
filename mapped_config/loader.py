@@ -19,7 +19,10 @@ def dict_to_namedtuple(dictionary):
             elif isinstance(value, list):
                 el = []
                 for i in value:
-                    el.append(dict_to_namedtuple(i))
+                    if isinstance(i, dict):
+                        el.append(dict_to_namedtuple(i))
+                    else:
+                        el.append(i)
                 dictionary[key] = el
     return namedtuple('Configuration', dictionary.keys())(**dictionary)
 
@@ -193,4 +196,5 @@ class JsonLoader(ConfigurationLoader):
         value = self.parameters[parameter_key]
         # Add the " for string values
         return str(value) if str(value).isdigit() else '"{value}"'.format(value=value)
+
 
