@@ -60,7 +60,13 @@ def mapped_to_cerberus(d):
                 schema_list = mapped_to_cerberus({"_":value[0]})["_"]
             else:
                 schema_list = {}
-            d[key] = {"type": "list", "default": [], "schema": schema_list}
+
+            if not isinstance(value, dict):
+                default_value = value
+            else:
+                default_value = []
+
+            d[key] = {"type": "list", "default": default_value, "schema": schema_list}
         else:
 
                 new_value = {

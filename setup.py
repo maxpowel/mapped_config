@@ -6,7 +6,7 @@ with open('requirements.txt') as fp:
 setup(
     name='mapped_config',
     packages=['mapped_config'],
-    version='2.34',
+    version='2.35',
     description='Mapped config loader for python for secure, easy and modular configuration management',
     author='Alvaro Garcia Gomez',
     author_email='maxpowel@gmail.com',
