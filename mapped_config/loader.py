@@ -61,11 +61,15 @@ def mapped_to_cerberus(d):
             else:
                 schema_list = {}
 
-            if not isinstance(value, dict):
+            if isinstance(value, list):
+                if isinstance(value[0], dict):
+                    default_value = []
+                else:
+                    default_value = value
+            elif not isinstance(value, dict):
                 default_value = value
             else:
                 default_value = []
-
             d[key] = {"type": "list", "default": default_value, "schema": schema_list}
         else:
 
